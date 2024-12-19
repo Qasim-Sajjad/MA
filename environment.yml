@@ -1,0 +1,23 @@
+name: music_analysis_env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - numpy=1.23.5
+  - pandas
+  - protobuf=3.20.3
+  - sdl
+  - jupyter
+  - ipykernel
+  - notebook
+  - pip
+  - pip:
+      - essentia-tensorflow
+      - librosa
+      - openai-whisper
+      - spleeter
+      - webrtcvad
+      - transformers
+      - huggingface_hub
+      - python-dotenv

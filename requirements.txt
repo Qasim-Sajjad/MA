@@ -1,0 +1,13 @@
+sdl
+essentia
+essentia-tensorflow
+pandas
+librosa
+numpy==1.23.5
+openai-whisper
+spleeter
+protobuf==3.20.3
+webrtcvad
+transformers
+huggingface_hub
+python-dotenv

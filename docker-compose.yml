@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  music_analysis:
+    build: .
+    volumes:
+      - .:/app
+    ports:
+      - "8888:8888"  # In case you want to use Jupyter Notebook
+    platform: linux/arm64  # Specify platform for M1 compatibility

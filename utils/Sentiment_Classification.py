@@ -3,9 +3,12 @@ import os
 import numpy as np
 import librosa
 import webrtcvad
+import requests
+from pydub import AudioSegment
 from spleeter.separator import Separator
-import whisper
 from transformers import pipeline
+from dotenv import load_dotenv
+
 
 class AudioSentimentAnalyzer:
     def __init__(self,
@@ -33,12 +36,23 @@ class AudioSentimentAnalyzer:
         # Vocal Separator
         self.separator = Separator('spleeter:2stems')
 
-        # Whisper for transcription
-        self.whisper_model = whisper.load_model("base")
+        #Using HuggingFace.
+        # API URL and headers
+        load_dotenv("utils\.env")
+        token = os.getenv(key="hf_whisper")
+        self.API_URL = "https://api-inference.huggingface.co/models/openai/whisper-large-v3"
+        self.headers = {"Authorization": f"Bearer {token}"}
 
         # Sentiment Analysis Pipeline
         self.sentiment_analyzer = pipeline("sentiment-analysis")
 
+    # Function to query the API
+    def query(self,filename):
+        with open(filename, "rb") as f:
+            data = f.read()
+        response = requests.post(self.API_URL, headers=self.headers, data=data)
+        return response.json()
+    
     def check_vocals_presence(self,audio_to_check_vocals,aggressiveness):
         """
         Check if vocals are present in the audio file.
@@ -88,6 +102,10 @@ class AudioSentimentAnalyzer:
             'voice_frames': voice_frames
         }
 
+    # Convert wav to mp3
+    def convert_wav_to_mp3(self,wav_filename, mp3_filename):
+        audio = AudioSegment.from_wav(wav_filename)  # Load the wav file
+        audio.export(mp3_filename, format="mp3")  # Export as mp3
 
     def separate_vocals(self,audio_path):
         """
@@ -103,7 +121,9 @@ class AudioSentimentAnalyzer:
 
             # Find vocals file
             vocals_path = os.path.join(output_dir, os.path.splitext(os.path.basename(audio_path))[0], 'vocals.wav')
+            self.convert_wav_to_mp3(vocals_path,mp3_filename=os.path.join(output_dir, os.path.splitext(os.path.basename(audio_path))[0], 'vocals.mp3'))
 
+            vocals_path = os.path.join(output_dir, os.path.splitext(os.path.basename(audio_path))[0], 'vocals.mp3')
             return vocals_path if os.path.exists(vocals_path) else None
         except Exception as e:
             print(f"Error separating vocals: {e}")
@@ -120,8 +140,8 @@ class AudioSentimentAnalyzer:
             str: Transcribed lyrics
         """
         try:
-            result = self.whisper_model.transcribe(vocals_path)
-            return result["text"]
+            output = self.query(filename=vocals_path)
+            return output.text
         except Exception as e:
             print(f"Error transcribing vocals: {e}")
             return None

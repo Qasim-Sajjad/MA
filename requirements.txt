@@ -1,0 +1,8 @@
+essentia-tensorflow
+librosa
+spleeter==2.4.0
+webrtcvad
+transformers
+huggingface_hub
+python-dotenv
+pydub

@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 import json
 import os
 
-load_dotenv(dotenv_path='.env')
+# load_dotenv(dotenv_path='utils\.env')
 
 #LYRICS BASED SENTIMENT ANALYSIS.
 
@@ -15,7 +15,10 @@ class LyricsExtractor:
         Args:
             model_name (str): Hugging Face model name for LLM. Defaults to "mistralai/Mixtral-8x7B-Instruct-v0.1".
         """ 
-        token = os.getenv(key='hf_mixtral')
+
+        # ------------ Mixtral Model For Sentiment Analysis. UPDATE API TOKEN HERE -------------
+        load_dotenv(dotenv_path='utils/.env')
+        token = os.getenv(key="hf_mixtral") # PLACE API TOKEN.
 
         if (token == None):
             raise ValueError("MIXTRAL LLM TOKEN DOES NOT EXIST, PLEASE CREATE A .ENV FILE AND PASTE token with name 'hf_mixtral'.")

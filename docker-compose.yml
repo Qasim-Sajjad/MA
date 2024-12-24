@@ -6,5 +6,5 @@ services:
     volumes:
       - .:/app
     ports:
-      - "8888:8888"  # In case you want to use Jupyter Notebook
-    platform: linux/arm64  # Specify platform for M1 compatibility
+      - "8888:8888"  # For Jupyter Notebook
+    platform: linux/amd64  # Specify platform for x86_architecture

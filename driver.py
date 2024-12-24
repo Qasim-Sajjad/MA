@@ -220,7 +220,7 @@ if __name__ == "__main__":
     #STORE RESULTS..
 
     #Store results of vocals dir in a CSV.
-    process_directory(audio_dir='audio_files/Vocals/Vocals',
+    process_directory(audio_dir='audio_files',
                     output_path='audio_files/output.csv',
                     genre_classifier=Genreclassifier,
                     mood_classifier=MoodClassifier,

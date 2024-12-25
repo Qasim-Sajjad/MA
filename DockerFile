@@ -37,6 +37,7 @@ RUN conda install -n music_analysis_env_final -c conda-forge \
     sdl \
     httpx \
     httpcore \
+    tensorflow \
     -y && \
     conda clean -afy
 

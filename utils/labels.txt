@@ -1,0 +1,1 @@
+Label mapping: {0: 'Blues', 1: 'Classical', 2: 'Electronic', 3: 'Experimental', 4: 'Folk', 5: 'Hip-Hop', 6: 'Instrumental', 7: 'Jazz', 8: 'Pop', 9: 'Rock'}

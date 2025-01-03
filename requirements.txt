@@ -6,3 +6,7 @@ transformers
 huggingface_hub
 python-dotenv
 pydub
+scikit-learn==1.6.0
+joblib==1.4.2
+scipy==1.14.1
+xgboost==2.1.3

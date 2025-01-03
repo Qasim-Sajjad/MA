@@ -40,12 +40,15 @@ def process_directory(audio_dir,
         with open(output_path, 'w', newline='') as csvfile:
             csv_writer = csv.writer(csvfile)
             header = ['Filename',
-                      'Essentia-Autotagging-Genre1', 'Genre1_Prob',
-                      'Essentia-Autotagging-Genre2', 'Genre2_Prob',
-                      'Essentia-Autotagging-Genre3', 'Genre3_Prob',
                       'MTG-Jamendo-Genre1', 'Genre1_Prob',
                       'MTG-Jamendo-Genre2', 'Genre2_Prob',
                       'MTG-Jamendo-Genre3', 'Genre3_Prob',
+                      'FMA-Genre1', 'Genre1_Prob',
+                      'FMA-Genre2', 'Genre2_Prob',
+                      'FMA-Genre3', 'Genre3_Prob',
+                      'Essentia-Autotagging-Genre1', 'Genre1_Prob',
+                      'Essentia-Autotagging-Genre2', 'Genre2_Prob',
+                      'Essentia-Autotagging-Genre3', 'Genre3_Prob',
                       'Essentia-Mood1', 'Mood1_Prob',
                       'Essentia-Mood2', 'Mood2_Prob',
                       'Essentia-Mood3', 'Mood3_Prob',
@@ -78,11 +81,11 @@ def process_directory(audio_dir,
 
             try:
                 # Get Top3 Genre, Mood and Instruments for the Music File
-                mtg_genre_predictions , essentia_tagging_predictions  = genre_classifier.predict(file_path)
+                mtg_genre_predictions , essentia_tagging_predictions, fma_predictions  = genre_classifier.predict(file_path)
                 print(f'MTG-Genre Predictions for {filename}: {mtg_genre_predictions}')
                 print(f'Essentia-Genre Predictions for {filename}: {essentia_tagging_predictions}')
-
-
+                print(f'FMA TOP 3 GENRES PREDICTIONS for {filename}: {fma_predictions}')
+                
                 mood_predictions = mood_classifier.predict(file_path)
                 print(f'Mood Predictions for {filename}: {mood_predictions}')
 
@@ -116,38 +119,45 @@ def process_directory(audio_dir,
                 while len(row) < 7:
                     row.extend(['', ''])
 
+                # Add FMA-genres
+                for genre, prob in fma_predictions:
+                    row.extend([genre, prob])
+                # Pad with empty values if less than 3 genres
+                while len(row) < 13:
+                    row.extend(['', ''])
+
                 # Add Essentia-AutoTagging genres
                 for genre, prob in essentia_tagging_predictions:
                     row.extend([genre, prob])
                 # Pad with empty values if less than 3 genres
-                while len(row) < 13:
+                while len(row) < 19:
                     row.extend(['', ''])
 
                 # Add moods
                 for mood, prob in mood_predictions:
                     row.extend([mood, prob])
                 # Pad with empty values if less than 3 moods
-                while len(row) < 19:
+                while len(row) < 25:
                     row.extend(['', ''])
 
                 # Add instruments
                 for instrument, prob in instrument_predictions:
                     row.extend([instrument, prob])
                 # Pad with empty values if less than 3 instruments
-                while len(row) < 25:
+                while len(row) < 29:
                     row.extend(['', ''])
 
                 # Add keys
                 for key in key_n_bpm['Key']:
                     row.extend([key])
                 # Pad with empty values if less than 4 keys
-                while len(row) < 29:
+                while len(row) < 32:
                     row.append('')
 
                 for bpm in key_n_bpm['BPM']:
                     row.extend([bpm])
                 # Pad with empty values if less than 3 BPMs
-                while len(row) < 32:
+                while len(row) < 35:
                     row.append('')
 
                 # Add BPM, lyrics, and sentiment
@@ -164,6 +174,7 @@ def process_directory(audio_dir,
                 # Store results (optional)
                 all_results[filename] = {
                     'mtg_genres': mtg_genre_predictions,
+                    'fma_genres': fma_predictions,
                     'essentia_genres': essentia_tagging_predictions,
                     'moods': mood_predictions,
                     'instruments': instrument_predictions,
@@ -192,7 +203,10 @@ if __name__ == "__main__":
         model_json_path=os.path.join(BASE_DIR, "metadata/mtg_jamendo_genre-discogs-effnet-1.json"),
         essentia_genre_model_path=os.path.join(BASE_DIR, "models/msd-musicnn-1.pb"),
         essentia_genre_json_path=os.path.join(BASE_DIR, "metadata/msd-musicnn-1.json"),
-        embedding_model_path=os.path.join(BASE_DIR, "models/discogs-effnet-bs64-1.pb")
+        embedding_model_path=os.path.join(BASE_DIR, "models/discogs-effnet-bs64-1.pb"),
+        fma_model_path=os.path.join(BASE_DIR,'models/fma_models/xgb_model.pkl'),
+        fma_scaler_path=os.path.join(BASE_DIR,'models/fma_models/standard_scaler.joblib'),
+        fma_pca_path=os.path.join(BASE_DIR,'models/fma_models/pca_model.joblib')
     )
 
     # Mood Classifier

@@ -141,7 +141,7 @@ class AudioSentimentAnalyzer:
         """
         try:
             output = self.query(filename=vocals_path)
-            return output.text
+            return output['text']
         except Exception as e:
             print(f"Error transcribing vocals: {e}")
             return None

@@ -94,7 +94,7 @@ class KeyBPMExtractor:
             bpms.append(round(float(tempo)))
 
             #Using librosa.beat.tempo for analysis now.
-            tempo = librosa.beat.tempo(y=self.y, sr=self.sr)[0]
+            tempo = librosa.feature.rhythm.tempo(y=self.y,sr=self.sr)[0]
 
             bpms.append(round(float(tempo)))
 

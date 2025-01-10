@@ -5,9 +5,9 @@ import librosa
 import webrtcvad
 import requests
 from pydub import AudioSegment
-from spleeter.separator import Separator
-from transformers import pipeline
 from dotenv import load_dotenv
+from spleeter.separator import Separator
+from transformers import pipeline, DistilBertTokenizer, DistilBertForSequenceClassification
 
 
 class AudioSentimentAnalyzer:
@@ -43,8 +43,19 @@ class AudioSentimentAnalyzer:
         self.API_URL = "https://api-inference.huggingface.co/models/openai/whisper-large-v3"
         self.headers = {"Authorization": f"Bearer {token}"}
 
-        # Sentiment Analysis Pipeline
-        self.sentiment_analyzer = pipeline("sentiment-analysis")
+        # Initialize tokenizer and model
+        self.tokenizer = DistilBertTokenizer.from_pretrained("distilbert-base-uncased-finetuned-sst-2-english")
+        self.model = DistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased-finetuned-sst-2-english")
+        
+        # Create pipeline with specified model and tokenizer
+        self.sentiment_analyzer = pipeline(
+            "sentiment-analysis",
+            model=self.model,
+            tokenizer=self.tokenizer,
+            truncation=True,
+            padding=True,
+            max_length=512
+        )
 
     # Function to query the API
     def query(self,filename):
@@ -195,22 +206,35 @@ class AudioSentimentAnalyzer:
           lyrics = None
           if vocals_path:
               lyrics = self.transcribe_vocals(vocals_path)
+              print(f'Lyrics Before Analysis:{lyrics}')
 
-              sentiment = self.Lyrics_Analyzer.analyze_sentiment(lyrics)
-              result.update({
-                  'lyrics': lyrics,
-                  'sentiment': sentiment
-              })
+              analysis = self.Lyrics_Analyzer.analyze_sentiment(lyrics)
 
-              has_lyrics = True
+              if analysis['valid'] == True:
+                print(f'Lyrics Analysis was Valid: {analysis["validation_details"]}')
+                result.update({
+                    'lyrics': lyrics,
+                    'sentiment': analysis['sentiment']
+                })
+                has_lyrics = True
+
+              else:
+                print(f'Lyrics Analysis was Invalid: {analysis["reason"]}')
+
+                mood_prompt = f"Describe the sentiment of a song with following moods: {', '.join(moods)}."
+                sentiment = self.analyze_sentiment(mood_prompt)              
+                result.update({
+                    'lyrics': "No Lyrics, Sentiment Based on Mood",
+                    'sentiment': f"The Sentiment of the Music is {sentiment['label']}"
+                })
         else:
-            # If no lyrics, use predefined mood
-            mood_prompt = f"Describe the sentiment of a song with following {moods[0]},{moods[1]}, {moods[2]} moods."
-            sentiment = self.analyze_sentiment(mood_prompt)
-            result.update({
-                'lyrics': "No Lyrics, Sentiment Based on Mood",
-                'sentiment': f"The Sentiment of the Music is {sentiment['label']}"
-            })
+          # If no lyrics, use predefined mood
+          mood_prompt = f"Describe the sentiment of a song with following moods: {', '.join(moods)}."
+          sentiment = self.analyze_sentiment(mood_prompt)
+          result.update({
+              'lyrics': "No Lyrics, Sentiment Based on Mood",
+              'sentiment': f"The Sentiment of the Music is {sentiment['label']}"
+          })
 
         return result, has_lyrics
 
@@ -225,6 +249,3 @@ class AudioSentimentAnalyzer:
         except Exception as e:
             print(f"Error during cleanup: {e}")
 
-# Lyrics = LyricsExtractor()
-# sentiment_anz = AudioSentimentAnalyzer(LyricsExtractor=Lyrics)
-# sentiment_anz.analyze(audio_path='audio_files/A Beacon of Hope.mp3',moods=['happy','sad'])

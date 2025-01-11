@@ -30,7 +30,7 @@ RUN conda --version
 RUN conda create -n music_analysis_env_final python=3.10 pip -y && \
     conda clean -afy
 
-RUN conda install -n music_analysis_env_final -c conda-forge \
+RUN conda install -n music_analysis_env_final -c conda-forge -c pytorch -c nvidia \
     numpy=1.23.5 \
     pandas \
     protobuf=3.20.3 \
@@ -38,6 +38,8 @@ RUN conda install -n music_analysis_env_final -c conda-forge \
     httpx \
     httpcore \
     tensorflow \
+    pytorch=1.12.1 \
+    cudatoolkit=11.6 \
     -y && \
     conda clean -afy
 

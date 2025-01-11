@@ -56,7 +56,7 @@ class LyricsExtractor:
         most_common_word, count = word_counts.most_common(1)[0]
         repetition_ratio = count / len(words)
         
-        if repetition_ratio > 0.5 and len(words) > 5:
+        if repetition_ratio > 0.3 and len(words) > 5:
             return False, f"Excessive repetition (word '{most_common_word}' appears {count} times)"
                             
         # Check word length
@@ -85,18 +85,45 @@ class LyricsExtractor:
         Returns:
             Tuple[bool, str]: (is_valid, explanation)
         """
-        prompt = (
-            "Analyze the following text and determine if it appears to be valid song lyrics. "
-            "Consider factors like coherence, structure, and meaningful content. "
-            "Respond with either 'VALID' or 'INVALID' followed by a brief explanation after a colon.\n\n"
-            f"Text to analyze:\n{text}\n\nResult:"
-        )
+        prompt = f"""
+        Analyze the following text and determine if it represents valid song lyrics based on these key criteria:
+
+        Purpose: Evaluate text for song lyric authenticity and provide clear validation.
+
+        IMPORTANT VALIDATION RULES:
+        - Must have coherent narrative or thematic flow
+        - Should demonstrate rhythmic or musical structure
+        - Contains repeating elements like chorus/hooks
+        - Uses poetic devices (metaphors, rhymes, etc.)
+        - Has appropriate line breaks and verses
+        - Follows natural language patterns
+        - Contains emotional or meaningful content
+
+        Text to analyze: {text}
+
+        OUTPUT FORMAT:
+        Respond with:
+        - 'VALID' or 'INVALID' status
+        - Brief explanation (max 50 words)
+        - Confidence score (0-100%)
+
+        Example Valid Response:
+        VALID: Clear verse-chorus structure, consistent rhyme scheme, emotionally resonant theme about love. Strong poetic imagery and natural flow. (Confidence: 92%)
+
+        Example Invalid Response:
+        INVALID: Random words without coherent structure or meaning. No musical elements or rhyme scheme present. Lacks any clear theme or purpose. (Confidence: 88%)
+
+        Analyze the text and provide result after [RESULT] token.[RESULT]:
+        """
 
         response = self.call_llm(self.llm_client, prompt, max_tokens=50)
         
-        is_valid = 'VALID' in response.upper()
-        explanation = response.split(':', 1)[1].strip() if ':' in response else response
-        
+        is_valid = False
+        explanation = response.split('[RESULT]', 1)[1].strip() if '[RESULT]' in response else response
+        if 'VALID' in explanation.upper():
+            is_valid = True
+        elif 'INVALID' in explanation.upper():
+            is_valid = False
         return is_valid, explanation
 
     def call_llm(self, inference_client: InferenceClient, prompt: str, max_tokens: int) -> str:

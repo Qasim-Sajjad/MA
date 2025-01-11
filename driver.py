@@ -5,8 +5,8 @@ import pandas as pd
 from utils.genre_classifier import AudioGenreClassifier
 from utils.instrument_classifier import AudioInstrumentClassifier
 from utils.key_bpm_extractor import KeyBPMExtractor
-from utils.LyricsAnalyzer import LyricsExtractor
 from utils.mood_classifier import AudioMoodClassifier
+from utils.LyricsAnalyzer import LyricsExtractor
 from utils.Sentiment_Classification import AudioSentimentAnalyzer
 
 def process_directory(audio_dir,

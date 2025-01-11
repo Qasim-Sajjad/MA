@@ -44,14 +44,14 @@ class AudioSentimentAnalyzer:
         self.headers = {"Authorization": f"Bearer {token}"}
 
         # Initialize tokenizer and model
-        # self.tokenizer = DistilBertTokenizer.from_pretrained("distilbert-base-uncased-finetuned-sst-2-english")
-        # self.model = DistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased-finetuned-sst-2-english")
+        self.tokenizer = DistilBertTokenizer.from_pretrained("distilbert-base-uncased-finetuned-sst-2-english")
+        self.model = DistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased-finetuned-sst-2-english")
         
         # Create pipeline with specified model and tokenizer
         self.sentiment_analyzer = pipeline(
             "sentiment-analysis",
-            # model=self.model,
-            # tokenizer=self.tokenizer,
+            model=self.model,
+            tokenizer=self.tokenizer,
             truncation=True,
             padding=True,
             max_length=512
@@ -155,7 +155,7 @@ class AudioSentimentAnalyzer:
             return output['text']
         except Exception as e:
             print(f"Error transcribing vocals: {e}")
-            return None
+            return "No Lyrics transcribed."
 
     def analyze_sentiment(self, text):
         """

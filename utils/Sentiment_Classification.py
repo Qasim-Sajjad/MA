@@ -1,9 +1,11 @@
 # SENTIMENT ANALYSIS
-import os
+import os,time
 import numpy as np
 import librosa
 import webrtcvad
-import requests
+import requests,re
+from collections import Counter
+from typing import List, Dict
 from pydub import AudioSegment
 from dotenv import load_dotenv
 from spleeter.separator import Separator
@@ -21,7 +23,11 @@ class AudioSentimentAnalyzer:
             model_dir (str, optional): Directory to store temporary files
         """
         self.model_dir = model_dir or os.path.join(os.getcwd(), 'audio_analysis_temp')
+        self.lyrics_seg_dir = os.path.join(os.getcwd(), 'lyrics_analysis_temp')
         self.Lyrics_Analyzer = LyricsExtractor
+        self.MAX_SEGMENT_DURATION = 25000  # 25 seconds in milliseconds
+        self.MAX_RETRIES = 3
+        self.RETRY_DELAY = 35  # seconds
 
         # Ensure temporary directory exists
         os.makedirs(self.model_dir, exist_ok=True)
@@ -40,8 +46,11 @@ class AudioSentimentAnalyzer:
         # API URL and headers
         load_dotenv("utils\.env")
         token = os.getenv(key="hf_whisper")
+        base_tk = os.getenv(key="hf_whisper_base_tk")
         self.API_URL = "https://api-inference.huggingface.co/models/openai/whisper-large-v3"
+        self.BACKUP_API_URL = "https://api-inference.huggingface.co/models/openai/whisper-base"
         self.headers = {"Authorization": f"Bearer {token}"}
+        self.BACKUP_headers = {"Authorization": f"Bearer {base_tk}"}
 
         # Initialize tokenizer and model
         self.tokenizer = DistilBertTokenizer.from_pretrained("distilbert-base-uncased-finetuned-sst-2-english")
@@ -57,12 +66,150 @@ class AudioSentimentAnalyzer:
             max_length=512
         )
 
-    # Function to query the API
-    def query(self,filename):
-        with open(filename, "rb") as f:
-            data = f.read()
-        response = requests.post(self.API_URL, headers=self.headers, data=data, timeout=(180, 180))
-        return response.json()
+    def split_audio(self, audio_path: str) -> List[str]:
+        """
+        Split audio file into 30-second segments.
+        
+        Args:
+            audio_path (str): Path to the audio file
+            
+        Returns:
+            List[str]: List of paths to the segmented audio files
+        """
+        audio = AudioSegment.from_file(audio_path)
+        duration = len(audio)
+        segment_paths = []
+        
+        for i in range(0, duration, self.MAX_SEGMENT_DURATION):
+            segment = audio[i:i + self.MAX_SEGMENT_DURATION]
+            segment_path = os.path.join(
+                self.lyrics_seg_dir, 
+                f"segment_{i//self.MAX_SEGMENT_DURATION}.wav"
+            )
+            segment.export(segment_path, format="wav")
+            segment_paths.append(segment_path)
+            
+        return segment_paths
+
+    def query_with_retry(self, filename: str) -> Dict:
+        """
+        Query the API with retry logic.
+        
+        Args:
+            filename (str): Path to the audio file
+            
+        Returns:
+            Dict: API response
+            
+        Raises:
+            Exception: If all retries fail
+        """
+        # Try with whisper-large-v3 first
+        for attempt in range(self.MAX_RETRIES):
+            try:
+                with open(filename, "rb") as f:
+                    data = f.read()
+                response = requests.post(
+                    self.API_URL, 
+                    headers=self.headers, 
+                    data=data,
+                    timeout=(180, 180)  # (connect timeout, read timeout)
+                )
+                
+                if response.status_code == 503:
+                    print(f"Service unavailable (attempt {attempt + 1}/{self.MAX_RETRIES})")
+                    if attempt < self.MAX_RETRIES - 1:
+                        time.sleep(self.RETRY_DELAY * (attempt + 1))  # Exponential backoff
+                        continue
+                        
+                response.raise_for_status()
+                return response.json()
+                
+            except requests.exceptions.RequestException as e:
+                print(f"Error during attempt {attempt + 1} with whisper-large: {str(e)}")
+                if attempt < self.MAX_RETRIES - 1:
+                    time.sleep(self.RETRY_DELAY * (attempt + 1))
+                    continue
+                
+                # If all retries failed, try whisper-base
+                print("Falling back to whisper-base model...")
+                try:
+                    with open(filename, "rb") as f:
+                        data = f.read()
+                    response = requests.post(
+                        self.BACKUP_API_URL,
+                        headers=self.BACKUP_headers,
+                        data=data,
+                        timeout=(180, 180)
+                    )
+                    response.raise_for_status()
+                    return response.json()
+                    
+                except requests.exceptions.RequestException as backup_error:
+                    raise Exception(f"Failed with both models. Last error: {str(backup_error)}")
+
+    def cleanse_lyrics(self, lyrics: str) -> str:
+        """
+        Clean lyrics by removing excessive repetitions and noise.
+        
+        Args:
+            lyrics (str): Raw lyrics text
+        
+        Returns:
+            str: Cleaned lyrics
+        """
+        # Step 1: Tokenize the lyrics into words
+        words = re.findall(r'\b\w+\b', lyrics.lower())
+        
+        # Step 2: Count word frequencies
+        word_counts = Counter(words)
+        
+        # Step 3: Filter out words that repeat more than 5 times
+        filtered_words = [word for word in words if word_counts[word] <= 5]
+        
+        # Step 4: Join the filtered words back into a string
+        cleansed_lyrics = " ".join(filtered_words)
+        
+        # Step 5: Handle edge cases where no meaningful lyrics remain
+        if not cleansed_lyrics.strip():
+            return "No meaningful lyrics."
+        
+        return cleansed_lyrics
+
+    def query(self, filename: str) -> str:
+        """
+        Process audio file by splitting into segments and combining transcriptions.
+        
+        Args:
+            filename (str): Path to the audio file
+            
+        Returns:
+            str: Combined transcription from all segments
+        """
+        # Split audio into segments
+        segment_paths = self.split_audio(filename)
+        print(f'\n\nSegment Paths: {segment_paths}\n\n')
+        transcriptions = []
+        
+        # Process each segment
+        for segment_path in segment_paths:
+            try:
+                response = self.query_with_retry(segment_path)
+                if 'text' in response:
+                    # Clean the segment's lyrics before adding
+                    cleaned_segment = self.cleanse_lyrics(response['text'])
+                    if cleaned_segment != "No meaningful lyrics.":
+                        transcriptions.append(cleaned_segment)
+            except Exception as e:
+                print(f"Error processing segment {segment_path}: {str(e)}")
+                continue
+            finally:
+                # Clean up segment file
+                if os.path.exists(segment_path):
+                    os.remove(segment_path)
+        
+        # Combine all transcriptions
+        return ' '.join(transcriptions)
     
     def check_vocals_presence(self,audio_to_check_vocals,aggressiveness):
         """
@@ -152,7 +299,7 @@ class AudioSentimentAnalyzer:
         """
         try:
             output = self.query(filename=vocals_path)
-            return output['text']
+            return output
         except Exception as e:
             print(f"Error transcribing vocals: {e}")
             return "No Lyrics"

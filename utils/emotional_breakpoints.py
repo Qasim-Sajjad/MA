@@ -9,6 +9,25 @@ class TransitionType(Enum):
     TENSION_CHANGE = "tension_change"
     NEUTRAL = "neutral"
 
+def consolidate_breakpoints(breakpoints):
+    """
+    Consolidate breakpoints by only keeping points where the type changes.
+    """
+    if not breakpoints:
+        return []
+        
+    consolidated = []
+    # Always keep the first breakpoint
+    consolidated.append(breakpoints[0])
+    
+    # Compare each breakpoint with previous one
+    for i in range(1, len(breakpoints)):
+        # If current type is different from previous type, add it
+        if breakpoints[i]['type'] != breakpoints[i-1]['type']:
+            consolidated.append(breakpoints[i])
+    
+    return consolidated
+
 def smooth_features(feature_array, window_length=11, polyorder=3):
     """
     Apply Savitzky-Golay filtering to smooth feature arrays and reduce noise.
@@ -125,7 +144,10 @@ def detect_emotional_breakpoints(audio_path, threshold=0.7, min_distance_seconds
             'type': transition_type.value
         })
     
-    return breakpoints
+    # 5. Consolidate consecutive breakpoints of the same type
+    consolidated_breakpoints = consolidate_breakpoints(breakpoints)
+    
+    return consolidated_breakpoints
 
 # # Example usage
 # if __name__ == "__main__":

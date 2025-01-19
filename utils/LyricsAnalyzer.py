@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from huggingface_hub import login, InferenceClient
 
 class LyricsExtractor:
-    def __init__(self, model_name="mistralai/Mixtral-8x7B-Instruct-v0.1"):
+    def __init__(self, model_name="mistralai/Mistral-Nemo-Instruct-2407"):
         """
         Initializes the lyrics extractor with validation and sentiment analysis capabilities.
 
@@ -15,16 +15,16 @@ class LyricsExtractor:
             model_name (str): Hugging Face model name for LLM.
         """
 
-        # ------------ Mixtral Model For Sentiment Analysis. UPDATE API TOKEN HERE -------------
+        # ------------ Mistral Model For Sentiment Analysis. UPDATE API TOKEN HERE -------------
         load_dotenv(dotenv_path='utils/.env')
-        token = os.getenv(key="hf_mixtral") # PLACE API TOKEN.
+        token = os.getenv(key="hf_mistral_nemo") # PLACE API TOKEN.
         if token is None:
-            raise ValueError("MIXTRAL LLM TOKEN DOES NOT EXIST, PLEASE CREATE A .ENV FILE AND PASTE token with name 'hf_mixtral'.")
+            raise ValueError("MISTRAL LLM TOKEN DOES NOT EXIST, PLEASE CREATE A .ENV FILE AND PASTE token with name 'hf_mixtral'.")
         
         login(token=token, add_to_git_credential=True)
         self.llm_client = InferenceClient(
             model=model_name,
-            timeout=200,
+            timeout=250,
         )
 
     def is_valid_lyrics(self, text: str) -> Tuple[bool, Optional[str]]:
@@ -103,7 +103,7 @@ class LyricsExtractor:
 
         OUTPUT FORMAT:
         Respond with:
-        - 'VALID' or 'INVALID' status
+        - 'VALID' or 'INVALID' status. Only Provide One of the Status
         - Brief explanation (max 50 words)
         - Confidence score (0-100%)
 
@@ -118,11 +118,9 @@ class LyricsExtractor:
 
         response = self.call_llm(self.llm_client, prompt, max_tokens=50)
         
-        is_valid = False
+        is_valid = True #keep valid by default.
         explanation = response.split('[RESULT]', 1)[1].strip() if '[RESULT]' in response else response
-        if 'VALID' in explanation.upper():
-            is_valid = True
-        elif 'INVALID' in explanation.upper():
+        if 'INVALID' in explanation.upper():
             is_valid = False
         return is_valid, explanation
 

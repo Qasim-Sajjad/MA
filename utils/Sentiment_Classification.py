@@ -61,7 +61,7 @@ class AudioSentimentAnalyzer:
     def query(self,filename):
         with open(filename, "rb") as f:
             data = f.read()
-        response = requests.post(self.API_URL, headers=self.headers, data=data)
+        response = requests.post(self.API_URL, headers=self.headers, data=data, timeout=(180, 180))
         return response.json()
     
     def check_vocals_presence(self,audio_to_check_vocals,aggressiveness):
@@ -155,7 +155,7 @@ class AudioSentimentAnalyzer:
             return output['text']
         except Exception as e:
             print(f"Error transcribing vocals: {e}")
-            return "No Lyrics transcribed."
+            return "No Lyrics"
 
     def analyze_sentiment(self, text):
         """
@@ -224,7 +224,7 @@ class AudioSentimentAnalyzer:
                 mood_prompt = f"Describe the sentiment of a song with following moods: {', '.join(moods)}."
                 sentiment = self.analyze_sentiment(mood_prompt)              
                 result.update({
-                    'lyrics': "No Lyrics, Sentiment Based on Mood",
+                    'lyrics': "No Lyrics",
                     'sentiment': f"The Sentiment of the Music is {sentiment['label']}"
                 })
         else:
@@ -232,7 +232,7 @@ class AudioSentimentAnalyzer:
           mood_prompt = f"Describe the sentiment of a song with following moods: {', '.join(moods)}."
           sentiment = self.analyze_sentiment(mood_prompt)
           result.update({
-              'lyrics': "No Lyrics, Sentiment Based on Mood",
+              'lyrics': "No Lyrics",
               'sentiment': f"The Sentiment of the Music is {sentiment['label']}"
           })
 

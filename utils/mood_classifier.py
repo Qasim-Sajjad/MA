@@ -72,7 +72,7 @@ class AudioMoodClassifier:
 
         for metadata, model, model_name in zip(self.metadatas, self.models,self.models_names):
             # Get model name from the metadata filename
-            model_name = model_name.replace('-musicnn-msd-1', '')
+            model_name = model_name.replace('-musicnn-msd-2', '')
 
             # Compute model activations and take mean across time
             activations = model(audio)

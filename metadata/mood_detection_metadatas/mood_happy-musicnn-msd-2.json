@@ -1,12 +1,12 @@
 {
     "name": "mood happy",
     "type": "multi-class classifier",
-    "link": "https://essentia.upf.edu/models/classifiers/mood_happy/mood_happy-musicnn-msd-1.pb",
+    "link": "https://essentia.upf.edu/models/classifiers/mood_happy/mood_happy-musicnn-msd-2.pb",
     "version": "1",
     "description": "classification of music by mood (happy/non-happy)",
     "author": "Pablo Alonso",
     "email": "pablo.alonso@upf.edu",
-    "release_date": "2020-03-31",
+    "release_date": "2020-07-07",
     "framework": "tensorflow",
     "framework_version": "1.15.0",
     "classes": [

@@ -10,3 +10,4 @@ services:
     platform: linux/amd64  # Specify platform for x86_architecture
     environment:
       - TENSORFLOW_CPU_ONLY=1
+      - PYTHONUNBUFFERED=1

@@ -1,9 +1,9 @@
 essentia-tensorflow
-librosa
+librosa==0.10.1
 spleeter==2.4.0
 webrtcvad
-transformers
-huggingface_hub
+transformers==4.38.2
+huggingface_hub==0.20.3
 python-dotenv
 pydub
 scikit-learn==1.6.0

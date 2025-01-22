@@ -32,7 +32,7 @@ RUN conda create -n music_analysis_env_final python=3.10 pip -y && \
 
 RUN conda install -n music_analysis_env_final -c conda-forge -c pytorch -c nvidia \
     numpy=1.23.5 \
-    pandas \
+    pandas=1.5.3 \
     protobuf=3.20.3 \
     sdl \
     httpx \
@@ -48,8 +48,10 @@ SHELL ["conda", "run", "-n", "music_analysis_env_final", "/bin/bash", "-c"]
 # Copy requirements file for pip packages
 COPY requirements.txt /app/requirements.txt
 
-# Install pip packages using the requirements file
-RUN python -u -m pip install --verbose --progress-bar on -r /app/requirements.txt
+# Install pip packages, then remove pip's numpy and reinstall conda's version
+RUN python -u -m pip install -vvv --no-cache-dir --progress-bar on -r /app/requirements.txt && \
+    pip uninstall -y numpy && \
+    conda install -n music_analysis_env_final numpy=1.23.5 -y
 
 WORKDIR /app
 

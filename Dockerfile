@@ -49,9 +49,7 @@ SHELL ["conda", "run", "-n", "music_analysis_env_final", "/bin/bash", "-c"]
 COPY requirements.txt /app/requirements.txt
 
 # Install pip packages, then remove pip's numpy and reinstall conda's version
-RUN python -u -m pip install -vvv --no-cache-dir --progress-bar on -r /app/requirements.txt && \
-    pip uninstall -y numpy && \
-    conda install -n music_analysis_env_final numpy=1.23.5 -y
+RUN python -u -m pip install -vvv --no-cache-dir --progress-bar on -r /app/requirements.txt
 
 WORKDIR /app
 

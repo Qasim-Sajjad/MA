@@ -90,7 +90,6 @@ def split_audio_at_breakpoints(file_path, breakpoints):
     
     return segments
 
-
 def process_directory(audio_dir,
                       output_path,
                       genre_classifier,
@@ -100,10 +99,15 @@ def process_directory(audio_dir,
                       Sentiment_analyzer,
                       max_segments=20):
     """
-    Process audio files, skipping those already processed
+    Process audio files, including full song analysis followed by segment analysis
     """
+    print("\n" + "="*80)
+    print("Starting Audio Processing Pipeline")
+    print("="*80 + "\n")
+
     # Ensure output directory exists
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    print(f"Output directory confirmed: {os.path.dirname(output_path)}\n")
 
     # Try reading with different encodings
     encodings_to_try = ['latin-1', 'iso-8859-1', 'cp1252']
@@ -118,7 +122,38 @@ def process_directory(audio_dir,
         except Exception as e:
             print(f"Failed to read with {encoding} encoding: {e}")
 
-    # Create header for multiple segments
+    # Create header for full song analysis (same structure as base_segment_columns but for full song)
+    full_song_columns = [
+        'Full_Song_MTG-Jamendo-Genre1', 'Full_Song_Genre1_Prob',
+        'Full_Song_MTG-Jamendo-Genre2', 'Full_Song_Genre2_Prob',
+        'Full_Song_MTG-Jamendo-Genre3', 'Full_Song_Genre3_Prob',
+        'Full_Song_FMA-Genre1', 'Full_Song_Genre1_Prob',
+        'Full_Song_FMA-Genre2', 'Full_Song_Genre2_Prob',
+        'Full_Song_FMA-Genre3', 'Full_Song_Genre3_Prob',
+        'Full_Song_Essentia-Autotagging-Genre1', 'Full_Song_Genre1_Prob',
+        'Full_Song_Essentia-Autotagging-Genre2', 'Full_Song_Genre2_Prob',
+        'Full_Song_Essentia-Autotagging-Genre3', 'Full_Song_Genre3_Prob',
+        'Full_Song_Essentia-Mood1', 'Full_Song_Mood1_Prob',
+        'Full_Song_Essentia-Mood2', 'Full_Song_Mood2_Prob',
+        'Full_Song_Essentia-Mood3', 'Full_Song_Mood3_Prob',
+        'Full_Song_MTG-MoodTheme1', 'Full_Song_MoodTheme1_Prob',
+        'Full_Song_MTG-MoodTheme2', 'Full_Song_MoodTheme2_Prob',
+        'Full_Song_MTG-MoodTheme3', 'Full_Song_MoodTheme3_Prob',
+        'Full_Song_MTG-Jamendo-Instrument1', 'Full_Song_Instrument1_Prob',
+        'Full_Song_MTG-Jamendo-Instrument2', 'Full_Song_Instrument2_Prob',
+        'Full_Song_MTG-Jamend0-Instrument3', 'Full_Song_Instrument3_Prob',
+        'Full_Song_essentia.Key_edma',
+        'Full_Song_essentia.key_krumhansl',
+        'Full_Song_essentia.key_temperley',
+        'Full_Song_librosa.key',
+        'Full_Song_essentia.rhythm.bpm',
+        'Full_Song_librosa.beat_track (BPM)',
+        'Full_Song_librosa.beat.tempo (BPM)',
+        'Full_Song_Lyrics',
+        'Full_Song_Sentiment'
+    ]
+
+    # Keep the existing base_segment_columns
     base_segment_columns = [
         'Segment_Start_Time', 'Segment_End_Time', 'Transition_Type',
         'MTG-Jamendo-Genre1', 'Genre1_Prob',
@@ -133,6 +168,9 @@ def process_directory(audio_dir,
         'Essentia-Mood1', 'Mood1_Prob',
         'Essentia-Mood2', 'Mood2_Prob',
         'Essentia-Mood3', 'Mood3_Prob',
+        'MTG-MoodTheme1', 'MoodTheme1_Prob',
+        'MTG-MoodTheme2', 'MoodTheme2_Prob',
+        'MTG-MoodTheme3', 'MoodTheme3_Prob',
         'MTG-Jamendo-Instrument1', 'Instrument1_Prob',
         'MTG-Jamendo-Instrument2', 'Instrument2_Prob',
         'MTG-Jamend0-Instrument3', 'Instrument3_Prob',
@@ -147,8 +185,8 @@ def process_directory(audio_dir,
         'Sentiment Analysis'
     ]
 
-    # Create header with segments
-    header = ['Filename']
+    # Create header with full song analysis followed by segments
+    header = ['Filename'] + full_song_columns
     for i in range(max_segments):
         segment_columns = [f"{col}_Segment_{i+1}" for col in base_segment_columns]
         header.extend(segment_columns)
@@ -161,17 +199,126 @@ def process_directory(audio_dir,
 
     # Process each audio file in the directory
     for filename in os.listdir(audio_dir):
-        # Skip if file already processed
         if filename in processed_files:
-            print(f"Skipping already processed file: {filename}")
+            print(f"\nSkipping already processed file: {filename}")
             continue
 
-        if filename.endswith(('.wav', '.mp3', '.flac')):  # Add more extensions if needed
+        if filename.endswith(('.wav', '.mp3', '.flac')):
+            print("\n" + "="*80)
+            print(f"Processing file: {filename}")
+            print("="*80 + "\n")
+            
             file_path = os.path.join(audio_dir, filename)
 
             try:
-                # Detect emotional breakpoints
+                print("Starting full song analysis...")
+                print("-"*40)
+                
+                # Full song analysis with logging
+                print("Analyzing genres...")
+                mtg_genre_predictions, essentia_tagging_predictions, fma_predictions = genre_classifier.predict(file_path)
+                print("✓ Genre analysis complete")
+                print(f"MTG Genres: {mtg_genre_predictions}")
+                print(f"Essentia Genres: {essentia_tagging_predictions}")
+                print(f"FMA Genres: {fma_predictions}\n")
+
+                print("Analyzing moods...")
+                mood_predictions, mtg_mood_predictions = mood_classifier.predict(file_path)
+                print("✓ Mood analysis complete")
+                print(f"Detected moods: {mood_predictions}\n")
+                print(f"MTG MoodTheme Predictions: {mtg_mood_predictions}\n")
+
+                print("Analyzing instruments...")
+                instrument_predictions = Instrument_classifier.predict(file_path)
+                print("✓ Instrument analysis complete")
+                print(f"Detected instruments: {instrument_predictions}\n")
+
+                print("Extracting key and BPM...")
+                key_n_bpm = KeyBPM.analyze(file_path=file_path)
+                print("✓ Key and BPM extraction complete")
+                print(f"Key and BPM data: {key_n_bpm}\n")
+
+                print("Analyzing sentiment and lyrics...")
+                sentiment_results, has_lyrics = Sentiment_analyzer.analyze(
+                    file_path,
+                    moods=[mood for mood, prob in mood_predictions[:]]
+                )
+                print("✓ Sentiment analysis complete")
+                
+                # Process sentiment if lyrics exist
+                if has_lyrics:
+                    result_token = "[RESULT]"
+                    sentiment_results['sentiment'] = sentiment_results['sentiment'].split(result_token, 1)[1].strip()
+                    sentiment_results['sentiment'] = sentiment_results['sentiment'].split(result_token)[1]
+
+                # Add full song data
+                full_song_data = []
+                
+                # Add MTG-genres
+                for genre, prob in mtg_genre_predictions:
+                    full_song_data.extend([genre, prob])
+                while len(full_song_data) < 6:
+                    full_song_data.extend(['', ''])
+
+                # Add FMA-genres
+                for genre, prob in fma_predictions:
+                    full_song_data.extend([genre, prob])
+                while len(full_song_data) < 12:
+                    full_song_data.extend(['', ''])
+
+                # Add Essentia-AutoTagging genres
+                for genre, prob in essentia_tagging_predictions:
+                    full_song_data.extend([genre, prob])
+                while len(full_song_data) < 18:
+                    full_song_data.extend(['', ''])
+
+                # Add moods
+                for mood, prob in mood_predictions:
+                    full_song_data.extend([mood, prob])
+                while len(full_song_data) < 24:
+                    full_song_data.extend(['', ''])
+
+                # Add MTG MoodTheme Predictions
+                for mood, prob in mtg_mood_predictions:
+                    full_song_data.extend([mood, prob])
+                while len(full_song_data) < 30:
+                    full_song_data.extend(['', ''])
+
+                # Add instruments
+                for instrument, prob in instrument_predictions:
+                    full_song_data.extend([instrument, prob])
+                while len(full_song_data) < 36:
+                    full_song_data.extend(['', ''])
+
+                # Add keys
+                for key in key_n_bpm['Key']:
+                    full_song_data.extend([key])
+                while len(full_song_data) < 40:
+                    full_song_data.append('')
+
+                # Add BPMs
+                for bpm in key_n_bpm['BPM']:
+                    full_song_data.extend([bpm])
+                while len(full_song_data) < 43:
+                    full_song_data.append('')
+
+                # Add lyrics and sentiment
+                full_song_data.extend([
+                    sentiment_results['lyrics'],
+                    sentiment_results['sentiment']
+                ])
+
+                print(f"Full Song Data: {full_song_data}\n")
+
+                row = [filename] + full_song_data
+
+                # Continue with existing segment processing
+                print("\nDetecting emotional breakpoints...")
                 breakpoints = detect_emotional_breakpoints(file_path)
+                if breakpoints:
+                    print(f"Found {len(breakpoints)} emotional breakpoints")
+                else:
+                    print("No emotional breakpoints detected - will process as single segment")
                 
                 if breakpoints:
                     # Split audio at breakpoints
@@ -193,35 +340,50 @@ def process_directory(audio_dir,
                         'transition_type': "full_song"
                     }]
     
-                # Initialize row with filename
-                row = [filename]
-
                 # Process each segment
                 for i, segment in enumerate(segments):
                     if i >= max_segments:
-                        print(f"Warning: {filename} has more than {max_segments} segments. Extra segments will be ignored.")
+                        print(f"\nWarning: {filename} has more than {max_segments} segments. Extra segments will be ignored.")
                         break
 
-                    # Get Top3 Genre, Mood and Instruments for the Music File
-                    mtg_genre_predictions , essentia_tagging_predictions, fma_predictions  = genre_classifier.predict(segment['path'])
-                    print(f'MTG-Genre Predictions for {filename} Segment {i}: {mtg_genre_predictions}')
-                    print(f'Essentia-Genre Predictions for {filename} Segment {i}: {essentia_tagging_predictions}')
-                    print(f'FMA TOP 3 GENRES PREDICTIONS for {filename} Segment {i}: {fma_predictions}')
+                    print(f"\nProcessing segment {i+1}/{len(segments)}")
+                    print("-"*40)
                     
-                    mood_predictions = mood_classifier.predict(segment['path'])
-                    print(f'Mood Predictions for {filename} Segment {i}: {mood_predictions}')
+                    print(f"Segment details:")
+                    print(f"- Start time: {segment['start_time']:.2f}s")
+                    print(f"- End time: {segment['end_time']:.2f}s")
+                    print(f"- Transition type: {segment['transition_type']}\n")
 
+                    # Analysis logging for each segment
+                    print("Analyzing segment genres...")
+                    mtg_genre_predictions, essentia_tagging_predictions, fma_predictions = genre_classifier.predict(segment['path'])
+                    print("✓ Segment genre analysis complete")
+                    print(f"MTG Genres: {mtg_genre_predictions}")
+                    print(f"Essentia Genres: {essentia_tagging_predictions}")
+                    print(f"FMA Genres: {fma_predictions}\n")
+
+                    print("Analyzing segment moods...")
+                    mood_predictions, mtg_mood_predictions = mood_classifier.predict(segment['path'])
+                    print("✓ Segment mood analysis complete")
+                    print(f"Detected moods: {mood_predictions}\n")
+                    print(f"MTG MoodTheme Predictions: {mtg_mood_predictions}\n")
+
+                    print("Analyzing segment instruments...")
                     instrument_predictions = Instrument_classifier.predict(segment['path'])
-                    print(f'Instrument Predictions for {filename} Segment {i}: {instrument_predictions}')
+                    print("✓ Segment instrument analysis complete")
+                    print(f"Detected instruments: {instrument_predictions}\n")
 
-                    # Get Key and BPM
+                    print("Extracting segment key and BPM...")
                     key_n_bpm = KeyBPM.analyze(file_path=segment['path'])
+                    print("✓ Segment key and BPM extraction complete")
+                    print(f"Key and BPM data: {key_n_bpm}\n")
 
-                    # Sentiment Analysis
+                    print("Analyzing segment sentiment...")
                     sentiment_results, has_lyrics = Sentiment_analyzer.analyze(
                         segment['path'],
                         moods=[mood for mood, prob in mood_predictions[:]]
                     )
+                    print("✓ Segment sentiment analysis complete\n")
 
                     # Process sentiment if lyrics exist
                     if has_lyrics:
@@ -266,24 +428,31 @@ def process_directory(audio_dir,
                     while len(segment_data) < 27:
                         segment_data.extend(['', ''])
 
+                    # Add MTG MoodTheme Predictions
+                    for mood, prob in mtg_mood_predictions:
+                        segment_data.extend([mood, prob])
+                    # Pad with empty values if less than 3 moods
+                    while len(segment_data) < 33:
+                        segment_data.extend(['', ''])
+
                     # Add instruments
                     for instrument, prob in instrument_predictions:
                         segment_data.extend([instrument, prob])
                     # Pad with empty values if less than 3 instruments
-                    while len(segment_data) < 33:
+                    while len(segment_data) < 39:
                         segment_data.extend(['', ''])
 
                     # Add keys
                     for key in key_n_bpm['Key']:
                         segment_data.extend([key])
                     # Pad with empty values if less than 4 keys
-                    while len(segment_data) < 37:
+                    while len(segment_data) < 43:
                         segment_data.append('')
 
                     for bpm in key_n_bpm['BPM']:
                         segment_data.extend([bpm])
                     # Pad with empty values if less than 3 BPMs
-                    while len(segment_data) < 40:
+                    while len(segment_data) < 46:
                         segment_data.append('')
 
                     # Add BPM, lyrics, and sentiment
@@ -292,6 +461,8 @@ def process_directory(audio_dir,
                         sentiment_results['sentiment']
                     ])
 
+                    # Added Segment Data to Row
+                    print(f"Segment Data: {segment_data}\n")
                     row.extend(segment_data)
                 
                 # Fill empty segments with blank values
@@ -312,16 +483,20 @@ def process_directory(audio_dir,
                             os.remove(segment['path'])
                     os.rmdir(os.path.dirname(segments[0]['path']))  # Remove temp directory
 
-                print(f"Processed {len(segments)} segments for {filename}")
-                print(f'\n\nFILE COMPLETED\n\n')
+                print(f"\nSuccessfully processed {len(segments)} segments for {filename}")
+                print("="*80)
+                print(f"Completed processing file: {filename}")
+                print("="*80 + "\n")
 
             except Exception as e:
-                print(f"Error processing {filename}: {str(e)}")
+                print(f"\nError processing {filename}")
+                print(f"Error details: {str(e)}\n")
                 continue
 
+    print("\n" + "="*80)
+    print("Audio Processing Pipeline Complete")
+    print("="*80 + "\n")
     return None
-
-
 
 if __name__ == "__main__":
     # Get the directory where your script is located
@@ -341,7 +516,10 @@ if __name__ == "__main__":
     # Mood Classifier
     MoodClassifier = AudioMoodClassifier(
         models_dir=os.path.join(BASE_DIR, "models/mood_detection_models"),
-        metadatas_dir=os.path.join(BASE_DIR, "metadata/mood_detection_metadatas")
+        metadatas_dir=os.path.join(BASE_DIR, "metadata/mood_detection_metadatas"),
+        mtg_moodtheme_model_path=os.path.join(BASE_DIR, "models/mtg_jamendo_moodtheme-discogs-effnet-1.pb"),
+        mtg_moodtheme_metadata_path=os.path.join(BASE_DIR, "metadata/mtg_jamendo_moodtheme-discogs-effnet-1.json"),
+        embedding_model_path=os.path.join(BASE_DIR, "models/discogs-effnet-bs64-1.pb")
     )
 
     # Instrument Classifier

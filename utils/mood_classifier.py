@@ -1,17 +1,29 @@
 import os
 import json
-from essentia.standard import MonoLoader, TensorflowPredictMusiCNN
+from essentia.standard import MonoLoader, TensorflowPredictMusiCNN, TensorflowPredict2D, TensorflowPredictEffnetDiscogs
 
 class AudioMoodClassifier:
-    def __init__(self, models_dir,metadatas_dir):
+    def __init__(self,
+                models_dir,
+                metadatas_dir,
+                mtg_moodtheme_model_path=None,
+                mtg_moodtheme_metadata_path=None,
+                embedding_model_path=None):
         """
         Initialize the MoodClassifier with mood models directory and metadatas dir
 
         Args:
             models_dir (str): Directory containing model .pb and .json files
+            metadatas_dir (str): Directory containing metadata files
+            mtg_moodtheme_model_path (str): Path to the MTG mood theme model
+            mtg_moodtheme_metadata_path (str): Path to the MTG mood theme metadata
+            embedding_model_path (str): Path to the embedding model
         """
         self.models_dir = models_dir
         self.metadatas_dir = metadatas_dir
+        self.mtg_moodtheme_model_path = mtg_moodtheme_model_path
+        self.mtg_moodtheme_metadata_path = mtg_moodtheme_metadata_path
+        self.embedding_model_path = embedding_model_path
         self.models = []
         self.models_names = []
         self.metadatas = []
@@ -52,6 +64,28 @@ class AudioMoodClassifier:
             self.models.append(model)
             self.metadatas.append(metadata)
 
+    def load_mtg_moodtheme_model(self):
+        """Load MTG mood theme model and its metadata"""
+        if not self.mtg_moodtheme_model_path or not self.mtg_moodtheme_metadata_path:
+            return None, None
+
+        with open(self.mtg_moodtheme_metadata_path, 'r') as f:
+            metadata = json.load(f)
+
+        model = TensorflowPredict2D(graphFilename=self.mtg_moodtheme_model_path)
+        return model, metadata
+
+    def load_embeddings(self, audio):
+        """Load embeddings from the audio using EffnetDiscogs model"""
+        if not self.embedding_model_path:
+            return None
+
+        embedding_model = TensorflowPredictEffnetDiscogs(
+            graphFilename=self.embedding_model_path, 
+            output="PartitionedCall:1"
+        )
+        return embedding_model(audio)
+
     def predict(self, audio_path, sample_rate=16000):
         """
         Predict audio Mood Classification.
@@ -67,26 +101,36 @@ class AudioMoodClassifier:
         loader = MonoLoader(sampleRate=sample_rate, filename=audio_path)
         audio = loader()
 
-        # Predictions from all models.
+        # Predictions from all models
         results = {}
+        # Prediction from MTG Mood Theme Model
+        mtg_results = {}
 
-        for metadata, model, model_name in zip(self.metadatas, self.models,self.models_names):
-            # Get model name from the metadata filename
+        # Get predictions from Essentia models
+        for metadata, model, model_name in zip(self.metadatas, self.models, self.models_names):
             model_name = model_name.replace('-musicnn-msd-2', '')
-
-            # Compute model activations and take mean across time
             activations = model(audio)
             mean_activations = activations.mean(axis=0)
 
             for label, probability in zip(metadata['classes'], mean_activations):
-              if not label.startswith('non') and not label.startswith('not'):
-                results[label] = float(f'{100 * probability:.1f}')
+                if not label.startswith('non') and not label.startswith('not'):
+                    results[label] = float(f'{100 * probability:.1f}')
 
-        #Get Top 3 Predictions.
+        # Get predictions from MTG mood theme model
+        mtg_model, mtg_metadata = self.load_mtg_moodtheme_model()
+        if mtg_model and mtg_metadata:
+            embeddings = self.load_embeddings(audio)
+            if embeddings is not None:
+                mtg_predictions = mtg_model(embeddings)
+                mtg_predictions = mtg_predictions.mean(axis=0)
+                
+                for label, probability in zip(mtg_metadata['classes'], mtg_predictions):
+                    mtg_results[label] = float(f'{100 * probability:.1f}')
+
+        # Get Top 3 Predictions
         results = self.get_top_3_predictions(results)
-
-        #Return Top 3 Moods Of the Song.
-        return results
+        mtg_results = self.get_top_3_predictions(mtg_results)
+        return results, mtg_results
 
     def get_top_3_predictions(self, predictions):
         """

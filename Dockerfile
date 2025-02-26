@@ -39,7 +39,6 @@ RUN conda install -n music_analysis_env_final -c conda-forge -c pytorch -c nvidi
     httpcore \
     tensorflow=2.9.1 \
     pytorch=1.12.1 \
-    cudatoolkit=11.6 \
     -y && \
     conda clean -afy
 

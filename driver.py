@@ -127,9 +127,6 @@ def process_directory(audio_dir,
         'Full_Song_MTG-Jamendo-Genre1', 'Full_Song_Genre1_Prob',
         'Full_Song_MTG-Jamendo-Genre2', 'Full_Song_Genre2_Prob',
         'Full_Song_MTG-Jamendo-Genre3', 'Full_Song_Genre3_Prob',
-        'Full_Song_FMA-Genre1', 'Full_Song_Genre1_Prob',
-        'Full_Song_FMA-Genre2', 'Full_Song_Genre2_Prob',
-        'Full_Song_FMA-Genre3', 'Full_Song_Genre3_Prob',
         'Full_Song_Essentia-Autotagging-Genre1', 'Full_Song_Genre1_Prob',
         'Full_Song_Essentia-Autotagging-Genre2', 'Full_Song_Genre2_Prob',
         'Full_Song_Essentia-Autotagging-Genre3', 'Full_Song_Genre3_Prob',
@@ -145,9 +142,7 @@ def process_directory(audio_dir,
         'Full_Song_essentia.Key_edma',
         'Full_Song_essentia.key_krumhansl',
         'Full_Song_essentia.key_temperley',
-        'Full_Song_librosa.key',
         'Full_Song_essentia.rhythm.bpm',
-        'Full_Song_librosa.beat_track (BPM)',
         'Full_Song_librosa.beat.tempo (BPM)',
         'Full_Song_Lyrics',
         'Full_Song_Sentiment'
@@ -159,9 +154,6 @@ def process_directory(audio_dir,
         'MTG-Jamendo-Genre1', 'Genre1_Prob',
         'MTG-Jamendo-Genre2', 'Genre2_Prob',
         'MTG-Jamendo-Genre3', 'Genre3_Prob',
-        'FMA-Genre1', 'Genre1_Prob',
-        'FMA-Genre2', 'Genre2_Prob',
-        'FMA-Genre3', 'Genre3_Prob',
         'Essentia-Autotagging-Genre1', 'Genre1_Prob',
         'Essentia-Autotagging-Genre2', 'Genre2_Prob',
         'Essentia-Autotagging-Genre3', 'Genre3_Prob',
@@ -177,9 +169,7 @@ def process_directory(audio_dir,
         'essentia.Key_edma',
         'essentia.key_krumhansl',
         'essentia.key_temperley',
-        'librosa.key',
         'essentia.rhythm.bpm',
-        'librosa.beat_track (BPM)',
         'librosa.beat.tempo (BPM)',
         'Lyrics',
         'Sentiment Analysis'
@@ -216,11 +206,10 @@ def process_directory(audio_dir,
                 
                 # Full song analysis with logging
                 print("Analyzing genres...")
-                mtg_genre_predictions, essentia_tagging_predictions, fma_predictions = genre_classifier.predict(file_path)
+                mtg_genre_predictions, essentia_tagging_predictions = genre_classifier.predict(file_path)
                 print("✓ Genre analysis complete")
                 print(f"MTG Genres: {mtg_genre_predictions}")
                 print(f"Essentia Genres: {essentia_tagging_predictions}")
-                print(f"FMA Genres: {fma_predictions}\n")
 
                 print("Analyzing moods...")
                 mood_predictions, mtg_mood_predictions = mood_classifier.predict(file_path)
@@ -260,46 +249,40 @@ def process_directory(audio_dir,
                 while len(full_song_data) < 6:
                     full_song_data.extend(['', ''])
 
-                # Add FMA-genres
-                for genre, prob in fma_predictions:
-                    full_song_data.extend([genre, prob])
-                while len(full_song_data) < 12:
-                    full_song_data.extend(['', ''])
-
                 # Add Essentia-AutoTagging genres
                 for genre, prob in essentia_tagging_predictions:
                     full_song_data.extend([genre, prob])
-                while len(full_song_data) < 18:
+                while len(full_song_data) < 12:
                     full_song_data.extend(['', ''])
 
                 # Add moods
                 for mood, prob in mood_predictions:
                     full_song_data.extend([mood, prob])
-                while len(full_song_data) < 24:
+                while len(full_song_data) < 18:
                     full_song_data.extend(['', ''])
 
                 # Add MTG MoodTheme Predictions
                 for mood, prob in mtg_mood_predictions:
                     full_song_data.extend([mood, prob])
-                while len(full_song_data) < 30:
+                while len(full_song_data) < 24:
                     full_song_data.extend(['', ''])
 
                 # Add instruments
                 for instrument, prob in instrument_predictions:
                     full_song_data.extend([instrument, prob])
-                while len(full_song_data) < 36:
+                while len(full_song_data) < 30:
                     full_song_data.extend(['', ''])
 
                 # Add keys
                 for key in key_n_bpm['Key']:
                     full_song_data.extend([key])
-                while len(full_song_data) < 40:
+                while len(full_song_data) < 33:
                     full_song_data.append('')
 
                 # Add BPMs
                 for bpm in key_n_bpm['BPM']:
                     full_song_data.extend([bpm])
-                while len(full_song_data) < 43:
+                while len(full_song_data) < 35:
                     full_song_data.append('')
 
                 # Add lyrics and sentiment
@@ -356,11 +339,10 @@ def process_directory(audio_dir,
 
                     # Analysis logging for each segment
                     print("Analyzing segment genres...")
-                    mtg_genre_predictions, essentia_tagging_predictions, fma_predictions = genre_classifier.predict(segment['path'])
+                    mtg_genre_predictions, essentia_tagging_predictions = genre_classifier.predict(segment['path'])
                     print("✓ Segment genre analysis complete")
                     print(f"MTG Genres: {mtg_genre_predictions}")
                     print(f"Essentia Genres: {essentia_tagging_predictions}")
-                    print(f"FMA Genres: {fma_predictions}\n")
 
                     print("Analyzing segment moods...")
                     mood_predictions, mtg_mood_predictions = mood_classifier.predict(segment['path'])
@@ -407,52 +389,45 @@ def process_directory(audio_dir,
                     while len(segment_data) < 9:
                         segment_data.extend(['', ''])
 
-                    # Add FMA-genres
-                    for genre, prob in fma_predictions:
-                        segment_data.extend([genre, prob])
-                    # Pad with empty values if less than 3 genres
-                    while len(segment_data) < 15:
-                        segment_data.extend(['', ''])
-
                     # Add Essentia-AutoTagging genres
                     for genre, prob in essentia_tagging_predictions:
                         segment_data.extend([genre, prob])
                     # Pad with empty values if less than 3 genres
-                    while len(segment_data) < 21:
+                    while len(segment_data) < 15:
                         segment_data.extend(['', ''])
 
                     # Add moods
                     for mood, prob in mood_predictions:
                         segment_data.extend([mood, prob])
                     # Pad with empty values if less than 3 moods
-                    while len(segment_data) < 27:
+                    while len(segment_data) < 21:
                         segment_data.extend(['', ''])
 
                     # Add MTG MoodTheme Predictions
                     for mood, prob in mtg_mood_predictions:
                         segment_data.extend([mood, prob])
                     # Pad with empty values if less than 3 moods
-                    while len(segment_data) < 33:
+                    while len(segment_data) < 27:
                         segment_data.extend(['', ''])
 
                     # Add instruments
                     for instrument, prob in instrument_predictions:
                         segment_data.extend([instrument, prob])
                     # Pad with empty values if less than 3 instruments
-                    while len(segment_data) < 39:
+                    while len(segment_data) < 33:
                         segment_data.extend(['', ''])
 
                     # Add keys
                     for key in key_n_bpm['Key']:
                         segment_data.extend([key])
-                    # Pad with empty values if less than 4 keys
-                    while len(segment_data) < 43:
+                    # Pad with empty values if less than 3 keys
+                    while len(segment_data) < 36:
                         segment_data.append('')
 
                     for bpm in key_n_bpm['BPM']:
                         segment_data.extend([bpm])
-                    # Pad with empty values if less than 3 BPMs
-                    while len(segment_data) < 46:
+                    # Pad with empty values if less than 2 BPMs
+                    while len(segment_data) < 38:
                         segment_data.append('')
 
                     # Add BPM, lyrics, and sentiment
@@ -507,10 +482,7 @@ if __name__ == "__main__":
         model_json_path=os.path.join(BASE_DIR, "metadata/mtg_jamendo_genre-discogs-effnet-1.json"),
         essentia_genre_model_path=os.path.join(BASE_DIR, "models/msd-musicnn-1.pb"),
         essentia_genre_json_path=os.path.join(BASE_DIR, "metadata/msd-musicnn-1.json"),
-        embedding_model_path=os.path.join(BASE_DIR, "models/discogs-effnet-bs64-1.pb"),
-        fma_model_path=os.path.join(BASE_DIR,'models/fma_models/xgb_model.pkl'),
-        fma_scaler_path=os.path.join(BASE_DIR,'models/fma_models/standard_scaler.joblib'),
-        fma_pca_path=os.path.join(BASE_DIR,'models/fma_models/pca_model.joblib')
+        embedding_model_path=os.path.join(BASE_DIR, "models/discogs-effnet-bs64-1.pb")
     )
 
     # Mood Classifier

@@ -56,18 +56,7 @@ class KeyBPMExtractor:
             keys.append(self.features['tonal.key_temperley.key'])
             scales.append(self.features['tonal.key_temperley.scale'])
 
-            #Get Key from librosa.
-            chroma = librosa.feature.chroma_cqt(y=self.y, sr=self.sr)
-            chroma_mean = np.mean(chroma,axis=1)
-            lib_keys = [
-                "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
-            ]
-            key_index = np.argmax(chroma_mean)
-            predicted_key = lib_keys[key_index]
-
             detection_key_scales = [f"{key} {scale}" for key, scale in zip(keys, scales)]
-
-            detection_key_scales.append(predicted_key)
             print(f'Detected Key Scales are: {detection_key_scales}')
 
             return detection_key_scales
@@ -89,13 +78,8 @@ class KeyBPMExtractor:
             bpm = self.features['rhythm.bpm']
             bpms.append(round(float(bpm)))
 
-            #Extracting BPM using librosa.beat_track.
-            tempo, _ = librosa.beat.beat_track(y=self.y, sr=self.sr)
-            bpms.append(round(float(tempo)))
-
             #Using librosa.beat.tempo for analysis now.
             tempo = librosa.feature.rhythm.tempo(y=self.y,sr=self.sr)[0]
-
             bpms.append(round(float(tempo)))
 
             return bpms
